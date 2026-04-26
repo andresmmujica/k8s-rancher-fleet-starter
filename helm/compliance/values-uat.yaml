@@ -1,0 +1,25 @@
+## UAT environment overrides
+##
+## Usage:
+##   helm install compliance ./helm/compliance -f values-uat.yaml \
+##     --create-namespace --namespace compliance
+##
+## Mirrors what Fleet applies to clusters with label env=uat.
+
+environment: uat
+
+ingress:
+  host: compliance-uat.lab.local
+
+replicaCount:
+  api: 3
+  frontend: 2
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+
+pdb:
+  enabled: true
+  minAvailable: 1

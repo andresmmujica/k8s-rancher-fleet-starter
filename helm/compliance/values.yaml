@@ -1,0 +1,111 @@
+## ComplianceCheck Helm values
+##
+## Defaults target cluster-dev. Override per environment via -f values-<env>.yaml
+## or Fleet targetCustomizations.
+
+# Environment label: dev | uat | prod
+environment: dev
+
+## Namespace management
+namespace:
+  create: true
+  name: compliance
+
+## Replica counts per tier
+replicaCount:
+  api: 2
+  frontend: 2
+
+## Container images
+image:
+  registry: harbor.lab.local
+  repository: socotec
+  api:
+    name: compliance-api
+    tag: v2
+  frontend:
+    name: compliance-frontend
+    tag: v1
+  pullPolicy: IfNotPresent
+
+## Database
+database:
+  image: postgres:17-alpine
+  storageClassName: longhorn
+  storageSize: 5Gi
+  credentials:
+    user: compliance
+    password: trainpass  # In production: externalSecrets.enabled=true
+    name: compliance
+
+## Feature flags
+features:
+  multiregion: "false"
+  advancedAudit: "true"
+  auditTrail: "false"
+  apiTimeoutSeconds: "30"
+  logLevel: "INFO"
+
+## Ingress
+ingress:
+  enabled: true
+  className: traefik
+  host: compliance.lab.local
+  tls:
+    enabled: true
+    secretName: compliance-tls
+    ## If true, chart creates a self-signed cert via a post-install hook.
+    ## In production, leave false and provision via cert-manager.
+    generateCert: false
+
+## Pod Security Standards
+podSecurity:
+  level: restricted   # privileged | baseline | restricted
+  enforce: true
+
+## NetworkPolicy
+networkPolicy:
+  enabled: true
+  defaultDeny: true
+
+## Monitoring — Prometheus ServiceMonitor + PrometheusRule
+monitoring:
+  enabled: true
+  prometheusRuleLabel: rancher-monitoring
+
+## HPA
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 75
+
+## PodDisruptionBudget
+pdb:
+  enabled: false
+  minAvailable: 1
+
+## Resources
+resources:
+  api:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  frontend:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+  db:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

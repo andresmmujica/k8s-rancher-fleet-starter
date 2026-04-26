@@ -1,0 +1,20 @@
+## Dev environment — matches the chart defaults but explicit for clarity
+##
+## Usage:
+##   helm install compliance ./helm/compliance -f values-dev.yaml \
+##     --create-namespace --namespace compliance
+
+environment: dev
+
+ingress:
+  host: compliance.lab.local
+
+replicaCount:
+  api: 2
+  frontend: 2
+
+autoscaling:
+  enabled: false
+
+pdb:
+  enabled: false

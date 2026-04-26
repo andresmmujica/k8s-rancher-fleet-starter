@@ -1,0 +1,29 @@
+{{- if .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: compliance-api
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "compliance.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "compliance.selectorLabels" . | nindent 6 }}
+      tier: api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: compliance-frontend
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "compliance.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "compliance.selectorLabels" . | nindent 6 }}
+      tier: frontend
+{{- end }}

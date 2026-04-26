@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "compliance.labels" . | nindent 4 }}
+    tier: db
+spec:
+  serviceName: db
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "compliance.selectorLabels" . | nindent 6 }}
+      tier: db
+  template:
+    metadata:
+      labels:
+        {{- include "compliance.selectorLabels" . | nindent 8 }}
+        tier: db
+    spec:
+      {{- if eq .Values.podSecurity.level "restricted" }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      {{- end }}
+      containers:
+        - name: postgres
+          image: {{ .Values.database.image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 5432
+              name: postgres
+          {{- if eq .Values.podSecurity.level "restricted" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 70
+            capabilities:
+              drop:
+                - ALL
+          {{- end }}
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_NAME
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U {{ .Values.database.credentials.user }} -d {{ .Values.database.credentials.name }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U {{ .Values.database.credentials.user }} -d {{ .Values.database.credentials.name }}
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.resources.db | nindent 12 }}
+      volumes:
+        - name: init
+          configMap:
+            name: db-init
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.database.storageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.database.storageSize }}

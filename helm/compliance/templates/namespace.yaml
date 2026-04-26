@@ -1,0 +1,15 @@
+{{- if .Values.namespace.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace.name }}
+  labels:
+    {{- include "compliance.labels" . | nindent 4 }}
+    {{- if .Values.podSecurity.enforce }}
+    pod-security.kubernetes.io/enforce: {{ .Values.podSecurity.level }}
+    pod-security.kubernetes.io/enforce-version: latest
+    {{- end }}
+    pod-security.kubernetes.io/warn: {{ .Values.podSecurity.level }}
+    pod-security.kubernetes.io/audit: {{ .Values.podSecurity.level }}
+    kubernetes.io/metadata.name: {{ .Values.namespace.name }}
+{{- end }}

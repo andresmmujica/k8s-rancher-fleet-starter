@@ -1,0 +1,72 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: compliance-api
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "compliance.labels" . | nindent 4 }}
+    tier: api
+    release: {{ .Values.monitoring.prometheusRuleLabel }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "compliance.selectorLabels" . | nindent 6 }}
+      tier: api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: compliance-alerts
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "compliance.labels" . | nindent 4 }}
+    release: {{ .Values.monitoring.prometheusRuleLabel }}
+spec:
+  groups:
+    - name: compliance.rules
+      interval: 30s
+      rules:
+        - alert: ComplianceApiDown
+          expr: |
+            up{job="compliance-api"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            app: compliance
+            environment: {{ .Values.environment }}
+          annotations:
+            summary: "ComplianceCheck API is down ({{ "{{ $labels.namespace }}" }})"
+            description: "API unreachable for >2 minutes in {{ .Values.environment }}."
+        - alert: ComplianceHighErrorRate
+          expr: |
+            sum(rate(flask_http_request_total{status=~"5.."}[5m])) by (endpoint)
+              /
+            sum(rate(flask_http_request_total[5m])) by (endpoint) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+            app: compliance
+            environment: {{ .Values.environment }}
+          annotations:
+            summary: "ComplianceCheck 5xx error rate >10% on {{ "{{ $labels.endpoint }}" }}"
+            description: "Elevated error rate in {{ .Values.environment }} for 5+ minutes."
+        - alert: ComplianceHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(flask_http_request_duration_seconds_bucket[5m])) by (endpoint, le)
+            ) > 1.0
+          for: 10m
+          labels:
+            severity: warning
+            app: compliance
+            environment: {{ .Values.environment }}
+          annotations:
+            summary: "ComplianceCheck p95 latency > 1s on {{ "{{ $labels.endpoint }}" }}"
+            description: "High latency in {{ .Values.environment }} for 10+ minutes."
+{{- end }}

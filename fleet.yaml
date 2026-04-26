@@ -1,0 +1,56 @@
+# Fleet configuration for ComplianceCheck
+#
+# Fleet watches this repo. When it detects changes, it applies the Helm chart
+# to every cluster matching the clusterSelector labels.
+#
+# Usage:
+#   1. Label your clusters in Rancher: env=dev or env=uat
+#   2. Create a GitRepo in Rancher CD pointing at this repo
+#   3. Fleet reconciles changes automatically
+
+defaultNamespace: compliance
+
+helm:
+  chart: helm/compliance
+  # Base values applied everywhere
+  values:
+    environment: dev
+    replicaCount:
+      api: 2
+      frontend: 2
+
+# Per-cluster overrides
+targetCustomizations:
+  - name: dev
+    clusterSelector:
+      matchLabels:
+        env: dev
+    helm:
+      values:
+        environment: dev
+        ingress:
+          host: compliance.lab.local
+        autoscaling:
+          enabled: false
+        pdb:
+          enabled: false
+
+  - name: uat
+    clusterSelector:
+      matchLabels:
+        env: uat
+    helm:
+      values:
+        environment: uat
+        ingress:
+          host: compliance-uat.lab.local
+        # UAT gets HPA + PDB to mirror what prod would look like
+        autoscaling:
+          enabled: true
+          minReplicas: 2
+          maxReplicas: 6
+        pdb:
+          enabled: true
+        replicaCount:
+          api: 3
+          frontend: 2

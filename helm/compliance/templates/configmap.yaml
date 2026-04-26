@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-config
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "compliance.labels" . | nindent 4 }}
+data:
+  FEATURE_MULTIREGION: {{ .Values.features.multiregion | quote }}
+  FEATURE_ADVANCED_AUDIT: {{ .Values.features.advancedAudit | quote }}
+  FEATURE_AUDIT_TRAIL: {{ .Values.features.auditTrail | quote }}
+  API_TIMEOUT_SECONDS: {{ .Values.features.apiTimeoutSeconds | quote }}
+  LOG_LEVEL: {{ .Values.features.logLevel | quote }}
+  ENVIRONMENT: {{ .Values.environment | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "compliance.labels" . | nindent 4 }}
+data:
+  # SINGLE-SOURCE-OF-TRUTH NOTE: this init.sql is duplicated from /db/init.sql
+  # at the repo root. Helm cannot .Files.Get paths outside the chart directory,
+  # so we inline the SQL here. If you change the schema or seed data, update
+  # BOTH locations.
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS reports (
+        id           SERIAL PRIMARY KEY,
+        title        VARCHAR(200) NOT NULL,
+        status       VARCHAR(20)  NOT NULL DEFAULT 'pending'
+                     CHECK (status IN ('pending', 'submitted', 'approved', 'rejected')),
+        submitted_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        approved_at  TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
+    CREATE INDEX IF NOT EXISTS idx_reports_submitted_at ON reports(submitted_at);
+    INSERT INTO reports (title, status, submitted_at, approved_at) VALUES
+        ('Site inspection - Manchester warehouse',      'approved',  '2026-03-01 09:15:00+00', '2026-03-03 14:20:00+00'),
+        ('Gas safety certificate - Block A, Leeds',     'approved',  '2026-03-15 11:00:00+00', '2026-03-18 16:45:00+00'),
+        ('Asbestos survey - Sheffield office',          'submitted', '2026-04-02 10:30:00+00', NULL),
+        ('Fire door inspection - London site 12',       'pending',   '2026-04-10 08:45:00+00', NULL),
+        ('Electrical PAT testing - Birmingham depot',   'approved',  '2026-04-05 13:20:00+00', '2026-04-08 10:15:00+00'),
+        ('Lift inspection - Edinburgh HQ',              'rejected',  '2026-04-07 15:00:00+00', NULL),
+        ('Water hygiene audit - Bristol branch',        'pending',   '2026-04-14 09:00:00+00', NULL);
