@@ -19,7 +19,7 @@ replicaCount:
 ## Container images
 image:
   registry: harbor.lab.local
-  repository: socotec
+  repository: training
   api:
     name: compliance-api
     tag: v2

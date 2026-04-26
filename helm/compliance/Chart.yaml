@@ -1,12 +1,12 @@
 apiVersion: v2
 name: compliance
-description: ComplianceCheck app for SOCOTEC training — 3-tier (frontend, API, PostgreSQL)
+description: ComplianceCheck app for K8s + Rancher training — 3-tier (frontend, API, PostgreSQL)
 type: application
 version: 0.1.0
 appVersion: "1.0"
 keywords:
   - compliance
-  - socotec
+  - training
   - training
 maintainers:
   - name: Andrés Mujica / NobleProg
