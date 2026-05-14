@@ -16,7 +16,7 @@ helm:
   values:
     environment: dev
     replicaCount:
-      api: 2
+      api: 3
       frontend: 2
 
 # Per-cluster overrides
